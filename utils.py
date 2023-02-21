@@ -82,12 +82,10 @@ def process_yamusic_playlist(headers, user_id, playlist_id=YA_PLAYLIST_OF_THE_DA
     tracks_raw = raw_response_json['tracks']
     tracks_pretty = []
     for track in tracks_raw:
-        tracks_pretty.append(Track(track))
+        tracks_pretty.append(Track(track).to_spotify_search_format())
 
     return tracks_pretty
 
-
-tracks = process_yamusic_playlist(headers=YA_HEADERS, user_id=USER_ID)
 
 
 # for track in tracks:
@@ -114,7 +112,6 @@ def search_tracks(tracks):
             }
 
         found_tracks.append(track_essential_data)
-        # track = track.to_spotify_search_format()
     return found_tracks
 
 
@@ -134,12 +131,9 @@ def post_to_playlist(uris):
     return res.json()
 
 
-test_tracks = [
-    'track:Babooshka artist:Kate Bush',
-    'track:Carnival of Rust artist:Poets Of The Fall', 'track:Космос artist:Три дня дождя']
-
-found_tracks = search_tracks(test_tracks)
-uris = create_uris(found_tracks)
+tracks = process_yamusic_playlist(headers=YA_HEADERS, user_id=USER_ID)
+found_tracks = search_tracks(tracks)
+uris = create_uris(found_tracks[0:5])
 res = post_to_playlist(uris)
 
 print(res)
