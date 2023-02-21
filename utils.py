@@ -30,7 +30,6 @@ SPOTIFY_HEADERS = {
 SPOTIFY_PLAYLIST_ID = cookie_conf['Spotify-playlist-id']
 
 
-
 # endregion
 
 
@@ -118,16 +117,19 @@ def search_tracks(tracks):
         # track = track.to_spotify_search_format()
     return found_tracks
 
+
 def create_uris(tracks):
     uris = []
     for track in tracks:
         if track.get('id') and track.get('id') != 'null':
             uris.append(f'spotify:track:{track["id"]}')
     return ','.join(uris)
-def post_to_playlist(uris):
 
-    res = requests.post(url=f'{SPOTIFY_API_DOMAIN}/{SPOTIFY_API_VERSION}/playlists/{SPOTIFY_PLAYLIST_ID}/tracks?{uris}',
-                       headers=SPOTIFY_HEADERS)
+
+def post_to_playlist(uris):
+    res = requests.post(
+        url=f'{SPOTIFY_API_DOMAIN}/{SPOTIFY_API_VERSION}/playlists/{SPOTIFY_PLAYLIST_ID}/tracks?uris={uris}',
+        headers=SPOTIFY_HEADERS)
 
     return res.json()
 
@@ -136,10 +138,8 @@ test_tracks = [
     'track:Babooshka artist:Kate Bush',
     'track:Carnival of Rust artist:Poets Of The Fall', 'track:Космос artist:Три дня дождя']
 
-
 found_tracks = search_tracks(test_tracks)
 uris = create_uris(found_tracks)
-print(uris)
 res = post_to_playlist(uris)
 
 print(res)
