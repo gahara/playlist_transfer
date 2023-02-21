@@ -2,8 +2,6 @@ import requests
 from dotenv import dotenv_values
 cookie_conf = dotenv_values('.env')
 
-
-from dotenv import load_dotenv
 # region constants
 DOMAIN = 'https://music.yandex.ru/api'
 API_VERSION = 'v2.1'
