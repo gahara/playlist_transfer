@@ -10,7 +10,7 @@ secret_conf = dotenv_values('.env')
 YA_DOMAIN = 'https://music.yandex.ru/api'
 YA_API_VERSION = 'v2.1'
 YA_PLAYLIST_OF_THE_DAY_PATH = 'handlers/playlist/503646255'
-USER_ID = 26932097
+USER_ID = secret_conf['Ya-music-id']
 YA_HEADERS = {
     'Accept': 'application/json; q=1.0, text/*; q=0.8, */*; q=0.1',
     'Accept-Language': 'ru,en-US;q=0.9,en;q=0.8,ja;q=0.7',
