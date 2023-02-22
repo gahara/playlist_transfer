@@ -91,6 +91,7 @@ def process_yamusic_playlist(headers, user_id, playlist_id=YA_PLAYLIST_OF_THE_DA
 
     return tracks_pretty
 
+# TODO: add spotify track class description
 def get_track_details(track):
     res = requests.get(url=f'{SPOTIFY_API_DOMAIN}/{SPOTIFY_API_VERSION}/{SPOTIFY_API_SEARCH_PATH}?q={track}&type'
                            f'=track,artist&limit=20&offset=5',
