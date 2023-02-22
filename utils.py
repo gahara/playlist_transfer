@@ -2,8 +2,9 @@ import json
 
 import requests
 from dotenv import dotenv_values
+import base64
 
-cookie_conf = dotenv_values('.env')
+secret_conf = dotenv_values('.env')
 
 # region constants
 YA_DOMAIN = 'https://music.yandex.ru/api'
@@ -14,8 +15,8 @@ YA_HEADERS = {
     'Accept': 'application/json; q=1.0, text/*; q=0.8, */*; q=0.1',
     'Accept-Language': 'ru,en-US;q=0.9,en;q=0.8,ja;q=0.7',
     # 'Connection': 'keep-alive'
-    'X-Current-UID': cookie_conf['X-Current-UID'],
-    'Cookie': cookie_conf['Cookie'],
+    'X-Current-UID': secret_conf['X-Current-UID'],
+    'Cookie': secret_conf['Cookie'],
     'X-Retpath-Y': 'https%3A%2F%2Fmusic.yandex.ru%2Fhome'
 }
 
@@ -25,9 +26,13 @@ SPOTIFY_API_SEARCH_PATH = 'search'
 SPOTIFY_HEADERS = {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
-    'Authorization': cookie_conf['Spotify-Bearer']
+    'Authorization': secret_conf['Spotify-Bearer']
 }
-SPOTIFY_PLAYLIST_ID = cookie_conf['Spotify-playlist-id']
+SPOTIFY_PLAYLIST_ID = secret_conf['Spotify-playlist-id']
+SPOTIFY_APP_CLIENT_ID = secret_conf['Client_id']
+SPOTIFY_APP_CLIENT_SECRET = secret_conf['Client_secret']
+SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/api/token'
+SPOTIFY_REFRESH_TOKEN = secret_conf['Spotify-refresh-token']
 
 
 # endregion
@@ -86,11 +91,6 @@ def process_yamusic_playlist(headers, user_id, playlist_id=YA_PLAYLIST_OF_THE_DA
 
     return tracks_pretty
 
-
-
-# for track in tracks:
-#     print(track.to_spotify_search_format())
-
 def get_track_details(track):
     res = requests.get(url=f'{SPOTIFY_API_DOMAIN}/{SPOTIFY_API_VERSION}/{SPOTIFY_API_SEARCH_PATH}?q={track}&type'
                            f'=track,artist&limit=20&offset=5',
@@ -131,9 +131,31 @@ def post_to_playlist(uris):
     return res.json()
 
 
+def refesh_the_token():
+    auth_client = f'{SPOTIFY_APP_CLIENT_ID}:{SPOTIFY_APP_CLIENT_SECRET}'
+    auth_encode = 'Basic ' + base64.b64encode(auth_client.encode()).decode()
+    headers = {
+        'Authorization': auth_encode,
+    }
+    data = {
+        'grant_type': 'refresh_token',
+        'refresh_token': SPOTIFY_REFRESH_TOKEN
+    }
+
+    response = requests.post(SPOTIFY_AUTH_URL, data=data, headers=headers)
+    if response.status_code == 200:
+        response_json = response.json()
+        print(response_json['access_token'])
+        return response_json['access_token']
+    else:
+        print(f'ERROR: {response})')
+
+
 tracks = process_yamusic_playlist(headers=YA_HEADERS, user_id=USER_ID)
 found_tracks = search_tracks(tracks)
-uris = create_uris(found_tracks[0:5])
+uris = create_uris(found_tracks[0:10])
 res = post_to_playlist(uris)
-
 print(res)
+
+# refesh_the_token()
+
