@@ -94,7 +94,7 @@ def process_yamusic_playlist(headers, user_id, playlist_id=YA_PLAYLIST_OF_THE_DA
 # TODO: add spotify track class description
 def get_track_details(track):
     res = requests.get(url=f'{SPOTIFY_API_DOMAIN}/{SPOTIFY_API_VERSION}/{SPOTIFY_API_SEARCH_PATH}?q={track}&type'
-                           f'=track,artist&limit=20&offset=5',
+                           f'=track,artist&limit=20',
                        headers=SPOTIFY_HEADERS)
     return res
 
@@ -132,6 +132,27 @@ def post_to_playlist(uris):
     return res.json()
 
 
+# can't be used to update playlist/manipulate user data
+def get_the_token():
+    auth_client = f'{SPOTIFY_APP_CLIENT_ID}:{SPOTIFY_APP_CLIENT_SECRET}'
+    auth_encode = 'Basic ' + base64.b64encode(auth_client.encode()).decode()
+    headers = {
+        'Authorization': auth_encode,
+    }
+    data = {
+        'grant_type': 'client_credentials',
+    }
+
+    response = requests.post(SPOTIFY_AUTH_URL, data=data, headers=headers)
+    if response.status_code == 200:
+        response_json = response.json()
+        print(response_json['access_token'])
+        return response_json['access_token']
+    else:
+        print(f'ERROR: {response})')
+
+
+# can be used to update access token until expires
 def refesh_the_token():
     auth_client = f'{SPOTIFY_APP_CLIENT_ID}:{SPOTIFY_APP_CLIENT_SECRET}'
     auth_encode = 'Basic ' + base64.b64encode(auth_client.encode()).decode()
@@ -146,17 +167,27 @@ def refesh_the_token():
     response = requests.post(SPOTIFY_AUTH_URL, data=data, headers=headers)
     if response.status_code == 200:
         response_json = response.json()
-        print(response_json['access_token'])
         return response_json['access_token']
     else:
         print(f'ERROR: {response})')
 
 
+# spotify_access_token = get_the_token()
+
+# refresh user access token
+spotify_access_token = refesh_the_token()
+# update headers
+SPOTIFY_HEADERS['Authorization'] = f'Bearer {spotify_access_token}'
+# get tracks form yamusic plalist
 tracks = process_yamusic_playlist(headers=YA_HEADERS, user_id=USER_ID)
+# search tracks by name and artist in spotify's library
 found_tracks = search_tracks(tracks)
+# transform tracks to format that spotify understands
 uris = create_uris(found_tracks[0:10])
+# post tracks
 res = post_to_playlist(uris)
 print(res)
+#
 
-# refesh_the_token()
+
 
