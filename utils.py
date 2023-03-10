@@ -1,8 +1,8 @@
-import json
-
 import requests
 from dotenv import dotenv_values
 import base64
+import typing
+from typing_extensions import TypedDict
 
 secret_conf = dotenv_values('.env')
 
@@ -34,51 +34,81 @@ SPOTIFY_APP_CLIENT_SECRET = secret_conf['Client_secret']
 SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/api/token'
 SPOTIFY_REFRESH_TOKEN = secret_conf['Spotify-refresh-token']
 
+# region Types
+SpotifyURI = str
+
+
+class YaArtist(TypedDict):
+    name: str
+
+
+class YaAlbum(TypedDict):
+    title: str
+
+
+class YaTrack(TypedDict):
+    title: str
+    artists: typing.List[YaArtist]
+    albums: typing.List[YaAlbum]
+
 
 # endregion
 
+class Track:
+    pass
+
 
 class Album:
-    def __init__(self, album_info):
-        self.title = album_info['title']
+    def __init__(self, album_info: typing.Dict[str, str]):
+        self.title: str = album_info.get('title')
 
     def __str__(self):
         return self.title
 
 
 class Artist:
-    def __init__(self, artist_info):
-        self.name = artist_info['name']
+    def __init__(self, artist_info: YaArtist):
+        self.name: str = artist_info.get('name')
 
     def __str__(self):
         return self.name
 
 
-class Track:
-    def __init__(self, track_info):
-        self.title = track_info['title']
+class TrackYa:
+    def __init__(self, track_info: YaTrack):
+        self.title = track_info.get('title')
         self.artists = self.get_artists(self, track_info=track_info)
         self.albums = self.get_albums(self, track_info=track_info)
 
     @staticmethod
-    def get_artists(self, track_info):
-        artists = []
-        for artist in track_info['artists']:
+    def get_artists(self, track_info: YaTrack) -> typing.List[Artist]:
+        artists: typing.List[Artist] = []
+        for artist in track_info.get('artists'):
             artists.append(Artist(artist))
         return artists
 
     @staticmethod
-    def get_albums(self, track_info):
-        albums = []
-        for album in track_info['albums']:
+    def get_albums(self, track_info: YaTrack) -> typing.List[Album]:
+        albums: typing.List[Album] = []
+        for album in track_info.get('albums'):
             albums.append(Album(album))
         return albums
 
-    def to_spotify_search_format(self):
+    def to_spotify_search_format(self) -> str:
         return f'track:{self.title} artist:{self.artists[0].name}'
 
     def __str__(self):
         return f'name: {self.title}, artists: {self.artists[0]}, album: {self.albums[0]}'
+
+
+class TrackSp(Track):
+    def __init__(self, track_info):
+        self.title: str = track_info.get('name')
+        self.id: str = track_info.get('id', 'null')
+        self.external_url: str = track_info.get('external_urls', {'spotify': 'null'}).get('spotify')
+
+    def __str__(self):
+        return f'name: {self.title}, id: {self.id}'
 
 
 def process_yamusic_playlist(headers, user_id, playlist_id=YA_PLAYLIST_OF_THE_DAY_PATH):
@@ -87,44 +117,43 @@ def process_yamusic_playlist(headers, user_id, playlist_id=YA_PLAYLIST_OF_THE_DA
     tracks_raw = raw_response_json['tracks']
     tracks_pretty = []
     for track in tracks_raw:
-        tracks_pretty.append(Track(track).to_spotify_search_format())
+        tracks_pretty.append(TrackYa(track).to_spotify_search_format())
 
     return tracks_pretty
 
+
 # TODO: add spotify track class description
-def get_track_details(track):
+def search_track_by_name(track):
     res = requests.get(url=f'{SPOTIFY_API_DOMAIN}/{SPOTIFY_API_VERSION}/{SPOTIFY_API_SEARCH_PATH}?q={track}&type'
                            f'=track,artist&limit=20',
                        headers=SPOTIFY_HEADERS)
     return res
 
 
-def search_tracks(tracks):
+def search_tracks(tracks: typing.List[str]):
     found_tracks = []
     for track in tracks:
-        full_info = get_track_details(track).json()
+        full_info = search_track_by_name(track).json()
         items = full_info.get('tracks').get('items', [])
         if not items:
-            track_essential_data = {'id': 'null', 'external_url': 'null'}
+            track_essential_data = TrackSp({'id': 'null'})
         else:
-            track_essential_data = {
-                'id': items[0].get('id'),
-                'external_url': items[0].get('external_urls').get('spotify')
-            }
+            track_essential_data = TrackSp(items[0])
 
         found_tracks.append(track_essential_data)
     return found_tracks
 
 
-def create_uris(tracks):
-    uris = []
+def create_uris(tracks: typing.List[TrackSp]) -> SpotifyURI:
+    uris: typing.List[SpotifyURI] = []
     for track in tracks:
-        if track.get('id') and track.get('id') != 'null':
-            uris.append(f'spotify:track:{track["id"]}')
+        id = track.id
+        if id and id != 'null':
+            uris.append(f'spotify:track:{id}')
     return ','.join(uris)
 
 
-def post_to_playlist(uris):
+def post_to_playlist(uris: SpotifyURI):
     res = requests.post(
         url=f'{SPOTIFY_API_DOMAIN}/{SPOTIFY_API_VERSION}/playlists/{SPOTIFY_PLAYLIST_ID}/tracks?uris={uris}',
         headers=SPOTIFY_HEADERS)
@@ -188,6 +217,3 @@ uris = create_uris(found_tracks[0:10])
 res = post_to_playlist(uris)
 print(res)
 #
-
-
-
