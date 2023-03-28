@@ -9,7 +9,7 @@ secret_conf = dotenv_values('.env')
 # region constants
 YA_DOMAIN = 'https://music.yandex.ru/api'
 YA_API_VERSION = 'v2.1'
-YA_PLAYLIST_OF_THE_DAY_PATH = 'handlers/playlist/503646255'
+YA_PLAYLIST_OF_THE_DAY_PATH = 'handlers/playlist/tenori.neko'
 USER_ID = secret_conf['Ya-music-id']
 YA_HEADERS = {
     'Accept': 'application/json; q=1.0, text/*; q=0.8, */*; q=0.1',
@@ -115,6 +115,8 @@ def process_yamusic_playlist(headers, user_id, playlist_id=YA_PLAYLIST_OF_THE_DA
     raw_response = requests.get(url=f'{YA_DOMAIN}/{YA_API_VERSION}/{playlist_id}/{user_id}', headers=headers)
     raw_response_json = raw_response.json()
     tracks_raw = raw_response_json['tracks']
+    tracks_raw = list(filter(lambda x: (isinstance(x, dict)),tracks_raw))
+
     tracks_pretty = []
     for track in tracks_raw:
         tracks_pretty.append(TrackYa(track).to_spotify_search_format())
@@ -123,7 +125,7 @@ def process_yamusic_playlist(headers, user_id, playlist_id=YA_PLAYLIST_OF_THE_DA
 
 
 # TODO: add spotify track class description
-def search_track_by_name(track):
+def search_track_by_name(track: str):
     res = requests.get(url=f'{SPOTIFY_API_DOMAIN}/{SPOTIFY_API_VERSION}/{SPOTIFY_API_SEARCH_PATH}?q={track}&type'
                            f'=track,artist&limit=20',
                        headers=SPOTIFY_HEADERS)
@@ -175,10 +177,9 @@ def get_the_token():
     response = requests.post(SPOTIFY_AUTH_URL, data=data, headers=headers)
     if response.status_code == 200:
         response_json = response.json()
-        print(response_json['access_token'])
         return response_json['access_token']
     else:
-        print(f'ERROR: {response})')
+        print(f'ERROR: {response.json()})')
 
 
 # can be used to update access token until expires
@@ -198,10 +199,15 @@ def refesh_the_token():
         response_json = response.json()
         return response_json['access_token']
     else:
-        print(f'ERROR: {response})')
+        print(f'ERROR: {response.json()})')
+
+# for big playlists
+def divide_into_chunks(lst, n):
+        for i in range(0, len(lst), n):
+            yield lst[i:i + n]
 
 
-# spotify_access_token = get_the_token()
+spotify_access_token = get_the_token()
 
 # refresh user access token
 spotify_access_token = refesh_the_token()
@@ -210,10 +216,21 @@ SPOTIFY_HEADERS['Authorization'] = f'Bearer {spotify_access_token}'
 # get tracks form yamusic plalist
 tracks = process_yamusic_playlist(headers=YA_HEADERS, user_id=USER_ID)
 # search tracks by name and artist in spotify's library
+
 found_tracks = search_tracks(tracks)
 # transform tracks to format that spotify understands
-uris = create_uris(found_tracks[0:10])
+uris = create_uris(found_tracks)
+
+# split uris into chunks
+uris_by_one = uris.split(',')
+uris_in_chunks = list(divide_into_chunks(uris_by_one, 60))
+chunk_for_playlist = [','.join(chunk) for chunk in uris_in_chunks]
+
+print(chunk_for_playlist)
 # post tracks
-res = post_to_playlist(uris)
+res = [post_to_playlist(uri) for uri in chunk_for_playlist]
 print(res)
-#
+
+
+
+
