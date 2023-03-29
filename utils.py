@@ -9,7 +9,7 @@ secret_conf = dotenv_values('.env')
 # region constants
 YA_DOMAIN = 'https://music.yandex.ru/api'
 YA_API_VERSION = 'v2.1'
-YA_PLAYLIST_OF_THE_DAY_PATH = 'handlers/playlist/tenori.neko'
+YA_PLAYLIST_OF_THE_DAY_PATH = 'handlers/playlist/<username>'
 USER_ID = secret_conf['Ya-music-id']
 YA_HEADERS = {
     'Accept': 'application/json; q=1.0, text/*; q=0.8, */*; q=0.1',
